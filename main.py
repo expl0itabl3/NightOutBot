@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import random
 
 from bs4 import BeautifulSoup
 import os
@@ -9,32 +10,20 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 async def bark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Barks."""
-    await update.message.reply_text("Woof!")
+    bark_sounds = ["Woof!", "Arf!", "Bark!", "Ruff!"]
+    await update.message.reply_text(random.choice(bark_sounds))
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Just a help function."""
     help_text = "Available commands:\n"
     help_text += "/bark - Barks.\n"
-    help_text += "/concerts - Checks for upcoming classical piano concerts.\n"
     help_text += "/comedy - Checks for upcoming English comedy shows.\n"
+    help_text += "/concerts - Checks for upcoming classical piano concerts.\n"
     help_text += "/movies - Checks for upcoming movie showings.\n"
     help_text += "/help - Displays this help message.\n"
+    help_text += "/start - Greets user.\n"
     await update.message.reply_text(help_text)
-
-
-async def piano_concerts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Checks for upcoming classical piano concerts."""
-    piano_url = "https://www.tivolivredenburg.nl/agenda/?event_category=piano"
-    piano_response = requests.get(piano_url)
-    piano_soup = BeautifulSoup(piano_response.content, 'html.parser')
-
-    piano_dates = piano_soup.find_all("time", class_="agenda-list-item__time")
-    piano_titles = piano_soup.find_all("a", class_="agenda-list-item__title-link")
-    result = ""
-    for date, title in zip(piano_dates[:5], piano_titles[5:]):
-        result += f"{date.text.strip()} - {title.text.strip()}\n"
-    await update.message.reply_text(result)
 
 
 async def comedy_nights(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -47,6 +36,20 @@ async def comedy_nights(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     comedy_titles = comedy_soup.find_all("div", class_="fwpl-item el-itawg")
     result = ""
     for date, title in zip(comedy_dates[:5], comedy_titles[5:]):
+        result += f"{date.text.strip()} - {title.text.strip()}\n"
+    await update.message.reply_text(result)
+
+
+async def piano_concerts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Checks for upcoming classical piano concerts."""
+    piano_url = "https://www.tivolivredenburg.nl/agenda/?event_category=piano"
+    piano_response = requests.get(piano_url)
+    piano_soup = BeautifulSoup(piano_response.content, 'html.parser')
+
+    piano_dates = piano_soup.find_all("time", class_="agenda-list-item__time")
+    piano_titles = piano_soup.find_all("a", class_="agenda-list-item__title-link")
+    result = ""
+    for date, title in zip(piano_dates[:5], piano_titles[5:]):
         result += f"{date.text.strip()} - {title.text.strip()}\n"
     await update.message.reply_text(result)
 
@@ -65,6 +68,14 @@ async def movies(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(result)
 
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send a message when the command /start is issued."""
+    user = update.effective_user
+    await update.message.reply_html(
+        rf"Hi {user.mention_html()}!"
+    )
+
+
 def main():
     """Starts the bot."""
     # Create the Application
@@ -73,10 +84,11 @@ def main():
 
     # On different commands - answer in Telegram
     application.add_handler(CommandHandler("bark", bark))
-    application.add_handler(CommandHandler("concerts", piano_concerts))
     application.add_handler(CommandHandler("comedy", comedy_nights))
-    application.add_handler(CommandHandler("movies", movies))
+    application.add_handler(CommandHandler("concerts", piano_concerts))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("movies", movies))
+    application.add_handler(CommandHandler("start", start))
 
     # Run the bot
     application.run_polling()
